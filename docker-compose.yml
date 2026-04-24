@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: insurance_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: insurance_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  user-service:
+    build: ./user-service
+    container_name: user_service
+    restart: always
+    environment:
+      DATABASE_URL: mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/insurance_db
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+    ports:
+      - "8001:8001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  policy-service:
+    build: ./policy-service
+    container_name: policy_service
+    restart: always
+    environment:
+      DATABASE_URL: mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/insurance_db
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+    ports:
+      - "8002:8002"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  claims-service:
+    build: ./claims-service
+    container_name: claims_service
+    restart: always
+    environment:
+      DATABASE_URL: mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/insurance_db
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+    ports:
+      - "8003:8003"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment_service
+    restart: always
+    environment:
+      DATABASE_URL: mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/insurance_db
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+    ports:
+      - "8004:8004"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api_gateway
+    restart: always
+    environment:
+      USER_SERVICE_URL: http://user-service:8001
+      POLICY_SERVICE_URL: http://policy-service:8002
+      CLAIMS_SERVICE_URL: http://claims-service:8003
+      PAYMENT_SERVICE_URL: http://payment-service:8004
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+    ports:
+      - "8000:8000"
+    depends_on:
+      - user-service
+      - policy-service
+      - claims-service
+      - payment-service
+
+  frontend:
+    build: ./frontend
+    container_name: insurance_frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - api-gateway
+
+volumes:
+  mysql_data:

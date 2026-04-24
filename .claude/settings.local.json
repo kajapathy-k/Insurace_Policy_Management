@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('scripts',{}\\), indent=2\\)\\)\")",
+      "Bash(mysql -u root -pabcd1234 -e \"CREATE DATABASE IF NOT EXISTS insurance_db;\")",
+      "Bash(mysql -u root -pabcd1234 insurance_db)"
+    ]
+  }
+}

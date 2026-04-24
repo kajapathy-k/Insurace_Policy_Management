@@ -1,0 +1,99 @@
+CREATE DATABASE IF NOT EXISTS insurance_db;
+USE insurance_db;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'customer', 'agent') DEFAULT 'customer',
+    phone VARCHAR(20),
+    address TEXT,
+    date_of_birth DATE,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS policies (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    policy_number VARCHAR(20) UNIQUE NOT NULL,
+    user_id INT NOT NULL,
+    policy_type ENUM('health', 'life', 'auto', 'home', 'travel') NOT NULL,
+    coverage_amount DECIMAL(15,2) NOT NULL,
+    premium_amount DECIMAL(10,2) NOT NULL,
+    premium_frequency ENUM('monthly', 'quarterly', 'semi-annual', 'annual') DEFAULT 'monthly',
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status ENUM('active', 'inactive', 'expired', 'cancelled', 'pending') DEFAULT 'pending',
+    beneficiary_name VARCHAR(100),
+    beneficiary_relation VARCHAR(50),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS claims (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    claim_number VARCHAR(20) UNIQUE NOT NULL,
+    policy_id INT NOT NULL,
+    user_id INT NOT NULL,
+    claim_type VARCHAR(50) NOT NULL,
+    claim_amount DECIMAL(15,2) NOT NULL,
+    approved_amount DECIMAL(15,2),
+    description TEXT NOT NULL,
+    incident_date DATE NOT NULL,
+    filed_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('submitted', 'under_review', 'approved', 'rejected', 'paid') DEFAULT 'submitted',
+    reviewer_notes TEXT,
+    resolved_date TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    payment_number VARCHAR(20) UNIQUE NOT NULL,
+    policy_id INT NOT NULL,
+    user_id INT NOT NULL,
+    payment_type ENUM('premium', 'claim_payout') NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method ENUM('credit_card', 'debit_card', 'bank_transfer', 'upi') NOT NULL,
+    status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+    transaction_id VARCHAR(100),
+    due_date DATE,
+    paid_date TIMESTAMP,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (policy_id) REFERENCES policies(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Seed admin user (password: Admin@123)
+INSERT IGNORE INTO users (username, email, full_name, password_hash, role)
+VALUES ('admin', 'admin@insurepro.com', 'System Admin',
+'$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'admin');
+
+-- Seed demo customers
+INSERT IGNORE INTO users (username, email, full_name, password_hash, role) VALUES
+('john_doe',   'john@example.com',   'John Doe',   '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'customer'),
+('jane_smith', 'jane@example.com',   'Jane Smith', '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'customer'),
+('bob_wilson', 'bob@example.com',    'Bob Wilson', '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'customer');
+
+-- Seed 10 dummy policies (all start as pending, to be approved by admin)
+INSERT IGNORE INTO policies (policy_number, user_id, policy_type, coverage_amount, premium_amount, premium_frequency, start_date, end_date, status, beneficiary_name, beneficiary_relation, description) VALUES
+('POL-0000000001', 5, 'health',  50000,   199,  'monthly',  '2026-01-01', '2027-01-01', 'active',  'Mary Doe',      'Spouse',    'Essential health cover for individuals with hospitalisation and outpatient benefits.'),
+('POL-0000000002', 5, 'life',    500000,  299,  'monthly',  '2026-02-01', '2046-02-01', 'active',  'Mary Doe',      'Spouse',    '20-year term life insurance providing financial security for your family.'),
+('POL-0000000003', 6, 'health',  200000,  599,  'monthly',  '2026-01-15', '2027-01-15', 'pending', 'Tom Smith',     'Son',       'Comprehensive health plan with specialist care, dental, and vision coverage.'),
+('POL-0000000004', 6, 'auto',    30000,   149,  'monthly',  '2026-03-01', '2027-03-01', 'active',  'Jane Smith',    'Self',      'Third-party liability and basic own-damage cover for personal vehicles.'),
+('POL-0000000005', 7, 'home',    150000,  199,  'monthly',  '2026-01-01', '2027-01-01', 'pending', 'Bob Wilson',    'Self',      'Building and contents protection against fire, flooding, and burglary.'),
+('POL-0000000006', 7, 'travel',  25000,   99,   'annual',   '2026-04-01', '2027-04-01', 'active',  'Lisa Wilson',   'Spouse',    'Annual multi-trip cover for medical emergencies, cancellations, and lost baggage.'),
+('POL-0000000007', 5, 'auto',    80000,   349,  'monthly',  '2026-02-15', '2027-02-15', 'pending', 'Mary Doe',      'Spouse',    'Full comprehensive cover including theft, natural disasters, and roadside assistance.'),
+('POL-0000000008', 6, 'life',    1000000, 799,  'monthly',  '2026-03-01', '2056-03-01', 'active',  'Tom Smith',     'Son',       'Lifetime coverage with cash value accumulation and premium waiver on disability.'),
+('POL-0000000009', 7, 'home',    400000,  449,  'monthly',  '2026-01-01', '2027-01-01', 'pending', 'Bob Wilson',    'Self',      'High-value home cover with liability protection and alternative accommodation benefit.'),
+('POL-0000000010', 5, 'travel',  75000,   199,  'annual',   '2026-05-01', '2027-05-01', 'active',  'Mary Doe',      'Spouse',    'Premium worldwide travel cover including adventure sports and business travel.');
