@@ -14,6 +14,15 @@ export default function PolicyDetail() {
   const [payForm, setPayForm] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [pageError, setPageError] = useState("");
+
+  const getErrorMessage = (err, fallback) => {
+    const detail = err?.response?.data?.detail;
+    if (Array.isArray(detail)) {
+      return detail.map((d) => d?.msg || String(d)).join(", ");
+    }
+    return detail || err?.response?.data?.message || fallback;
+  };
 
   const load = async () => {
     try {
@@ -23,6 +32,9 @@ export default function PolicyDetail() {
       ]);
       setPolicy(pRes.data);
       setPayments(payRes.data);
+      setPageError("");
+    } catch (err) {
+      setPageError(getErrorMessage(err, "Failed to load policy details"));
     } finally {
       setLoading(false);
     }
@@ -34,16 +46,25 @@ export default function PolicyDetail() {
 
   const handleStatusChange = async (status) => {
     setActionLoading(true);
-    await api.put(`/policies/${id}`, { status });
-    await load();
-    setActionLoading(false);
+    setPageError("");
+    try {
+      await api.put(`/policies/${id}`, { status });
+      await load();
+    } catch (err) {
+      setPageError(getErrorMessage(err, "Unable to update policy status"));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleApprove = async () => {
     setActionLoading(true);
+    setPageError("");
     try {
       await api.post(`/policies/${id}/approve`);
       await load();
+    } catch (err) {
+      setPageError(getErrorMessage(err, "Unable to approve policy"));
     } finally {
       setActionLoading(false);
     }
@@ -52,9 +73,12 @@ export default function PolicyDetail() {
   const handleReject = async () => {
     if (!window.confirm("Reject this policy application?")) return;
     setActionLoading(true);
+    setPageError("");
     try {
       await api.post(`/policies/${id}/reject`);
       await load();
+    } catch (err) {
+      setPageError(getErrorMessage(err, "Unable to reject policy"));
     } finally {
       setActionLoading(false);
     }
@@ -63,6 +87,7 @@ export default function PolicyDetail() {
   const handlePayment = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    setPageError("");
     try {
       await api.post("/payments", {
         policy_id: parseInt(id),
@@ -73,6 +98,8 @@ export default function PolicyDetail() {
       });
       setShowPayModal(false);
       await load();
+    } catch (err) {
+      setPageError(getErrorMessage(err, "Payment failed"));
     } finally {
       setSubmitting(false);
     }
@@ -80,8 +107,13 @@ export default function PolicyDetail() {
 
   const handleCancel = async () => {
     if (!window.confirm("Cancel this policy?")) return;
-    await api.delete(`/policies/${id}`);
-    navigate("/policies");
+    setPageError("");
+    try {
+      await api.delete(`/policies/${id}`);
+      navigate("/policies");
+    } catch (err) {
+      setPageError(getErrorMessage(err, "Unable to cancel policy"));
+    }
   };
 
   if (loading) return <div className="spinner" />;
@@ -140,6 +172,8 @@ export default function PolicyDetail() {
           )}
         </div>
       </div>
+
+      {pageError && <div className="alert alert-error">{pageError}</div>}
 
       <div
         style={{
