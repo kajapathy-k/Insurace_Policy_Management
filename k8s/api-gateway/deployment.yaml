@@ -22,7 +22,7 @@ spec:
       restartPolicy: Always
       containers:
         - name: api-gateway
-          image: kajapathy/api-gateway:v1.1.1
+          image: kajapathy/api-gateway:v1.1.2
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
