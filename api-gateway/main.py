@@ -56,7 +56,13 @@ async def proxy(request: Request, target_url: str) -> Response:
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
 async def gateway(path: str, request: Request):
-    full_path = f"/{path}"
+    # Normalize rewritten paths like //policies/... and optional /api prefixes.
+    full_path = f"/{path.lstrip('/')}"
+    if full_path.startswith("/api/"):
+        full_path = full_path[4:]
+    elif full_path == "/api":
+        full_path = "/"
+
     target_base = None
     for prefix, service_url in ROUTES.items():
         if full_path.startswith(prefix):
@@ -64,7 +70,9 @@ async def gateway(path: str, request: Request):
             break
     if not target_base:
         raise HTTPException(status_code=404, detail=f"No route for /{path}")
-    target_url = f"{target_base}/{path}"
+
+    target_path = full_path.lstrip("/")
+    target_url = f"{target_base}/{target_path}"
     return await proxy(request, target_url)
 
 if __name__ == "__main__":
