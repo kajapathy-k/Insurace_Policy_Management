@@ -25,19 +25,29 @@ export default function PolicyDetail() {
   };
 
   const load = async () => {
+    let warning = "";
+
     try {
-      const [pRes, payRes] = await Promise.all([
-        api.get(`/policies/${id}`),
-        api.get(`/payments/policy/${id}`),
-      ]);
+      const pRes = await api.get(`/policies/${id}`);
       setPolicy(pRes.data);
-      setPayments(payRes.data);
-      setPageError("");
     } catch (err) {
+      setPolicy(null);
+      setPayments([]);
       setPageError(getErrorMessage(err, "Failed to load policy details"));
-    } finally {
       setLoading(false);
+      return;
     }
+
+    try {
+      const payRes = await api.get(`/payments/policy/${id}`);
+      setPayments(payRes.data);
+    } catch (err) {
+      setPayments([]);
+      warning = getErrorMessage(err, "Failed to load payment history");
+    }
+
+    setPageError(warning);
+    setLoading(false);
   };
 
   useEffect(() => {
