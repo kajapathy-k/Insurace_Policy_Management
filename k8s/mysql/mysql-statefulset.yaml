@@ -71,6 +71,9 @@ spec:
             limits:
               cpu: "1"
               memory: 1Gi
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
       volumes:
         - name: mysql-init-sql
           configMap:
