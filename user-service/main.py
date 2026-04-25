@@ -31,6 +31,7 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
         email=payload.email,
         full_name=payload.full_name,
         password_hash=auth.hash_password(payload.password),
+        is_active=True,
         phone=payload.phone,
         address=payload.address,
         date_of_birth=payload.date_of_birth,

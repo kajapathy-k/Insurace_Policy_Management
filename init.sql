@@ -75,15 +75,33 @@ CREATE TABLE IF NOT EXISTS payments (
 );
 
 -- Seed admin user (password: Admin@123)
-INSERT IGNORE INTO users (username, email, full_name, password_hash, role)
-VALUES ('admin', 'admin@insurepro.com', 'System Admin',
-'$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'admin');
+INSERT INTO users (username, email, full_name, password_hash, role, is_active)
+VALUES (
+    'admin',
+    'admin@insurepro.com',
+    'System Admin',
+    '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi',
+    'admin',
+    TRUE
+)
+ON DUPLICATE KEY UPDATE
+    email = VALUES(email),
+    full_name = VALUES(full_name),
+    password_hash = VALUES(password_hash),
+    role = VALUES(role),
+    is_active = TRUE;
 
 -- Seed demo customers
-INSERT IGNORE INTO users (username, email, full_name, password_hash, role) VALUES
-('john_doe',   'john@example.com',   'John Doe',   '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'customer'),
-('jane_smith', 'jane@example.com',   'Jane Smith', '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'customer'),
-('bob_wilson', 'bob@example.com',    'Bob Wilson', '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'customer');
+INSERT INTO users (username, email, full_name, password_hash, role, is_active) VALUES
+('john_doe',   'john@example.com',   'John Doe',   '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'customer', TRUE),
+('jane_smith', 'jane@example.com',   'Jane Smith', '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'customer', TRUE),
+('bob_wilson', 'bob@example.com',    'Bob Wilson', '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'customer', TRUE)
+ON DUPLICATE KEY UPDATE
+    email = VALUES(email),
+    full_name = VALUES(full_name),
+    password_hash = VALUES(password_hash),
+    role = VALUES(role),
+    is_active = TRUE;
 
 -- Seed 10 dummy policies (all start as pending, to be approved by admin)
 INSERT IGNORE INTO policies (policy_number, user_id, policy_type, coverage_amount, premium_amount, premium_frequency, start_date, end_date, status, beneficiary_name, beneficiary_relation, description) VALUES
