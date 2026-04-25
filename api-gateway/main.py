@@ -27,6 +27,14 @@ ROUTES = {
     "/payments":      PAYMENT_SERVICE,
 }
 
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy",
+        "service": "api-gateway",
+        "routes": list(ROUTES.keys()),
+    }
+
 async def proxy(request: Request, target_url: str) -> Response:
     async with httpx.AsyncClient(timeout=30.0) as client:
         body = await request.body()
@@ -58,14 +66,6 @@ async def gateway(path: str, request: Request):
         raise HTTPException(status_code=404, detail=f"No route for /{path}")
     target_url = f"{target_base}/{path}"
     return await proxy(request, target_url)
-
-@app.get("/health")
-def health():
-    return {
-        "status": "healthy",
-        "service": "api-gateway",
-        "routes": list(ROUTES.keys()),
-    }
 
 if __name__ == "__main__":
     import uvicorn
