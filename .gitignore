@@ -1,132 +1,87 @@
-# Environment Variables
+# Secrets and local config
 .env
-.env.local
-.env.*.local
-.env.production.local
+.env.*
+!.env.example
 
-# Python
+# Python caches and virtual environments
 __pycache__/
 *.py[cod]
-*$py.class
+*.pyo
+*.pyd
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-venv/
-ENV/
-env/
-.venv
-
-# Virtual Environments
-venv/
-env/
 .venv/
+venv/
+env/
 ENV/
 env.bak/
 venv.bak/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-*.sublime-project
-*.sublime-workspace
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.npm
-.eslintcache
-.next/
-out/
+# Python tooling and test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+pip-wheel-metadata/
+*.egg-info/
 dist/
 build/
 
-# IDE - VS Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.code-workspace
+# Node and frontend build artifacts
+node_modules/
+frontend/node_modules/
+frontend/build/
+frontend/coverage/
+.npm/
+.pnpm-store/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# IDE - PyCharm
+# IDE and editor files
+.vscode/
 .idea/
 *.iml
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
 
-# OS
+# OS files
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
 Thumbs.db
+ehthumbs.db
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
-local.db
-mysql_data/
-postgres_data/
-
-# Logs
+# Logs and temp files
 logs/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-
-# Temporary files
+tmp/
+temp/
+.tmp/
 *.tmp
 *.temp
 *.bak
 *.backup
-*~
 
-# Docker
-.dockerignore
+# Databases and local runtime data
+*.db
+*.sqlite
+*.sqlite3
+mysql_data/
+postgres_data/
+
+# Docker local overrides
 docker-compose.override.yml
-
-# Project specific
-.local/
-.tmp/
-temp/
-tmp/
