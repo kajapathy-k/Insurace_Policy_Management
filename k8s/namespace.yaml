@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: insurance
+  labels:
+    app.kubernetes.io/name: insurance
+    app.kubernetes.io/part-of: insurance-platform
