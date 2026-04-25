@@ -75,7 +75,7 @@ export default function Login() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
             <p style={{ textAlign: 'center', fontSize: 12, color: '#6b7280', marginTop: 16 }}>
-              Demo: admin / Admin@123
+              Demo: admin / admin123
             </p>
           </form>
         ) : (

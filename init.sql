@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS payments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Seed admin user (password: Admin@123)
+-- Seed admin user (password: admin123)
 INSERT IGNORE INTO users (username, email, full_name, password_hash, role)
 VALUES ('admin', 'admin@insurepro.com', 'System Admin',
 '$2b$12$e8LAl9iWL7SzbvOOEqtYCeDw5EgLlNxZiWhp0vYCn8qiigeI/GYNi', 'admin');
