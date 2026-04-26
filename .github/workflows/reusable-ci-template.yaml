@@ -28,6 +28,18 @@ on:
         required: true
       SNYK_TOKEN:
         required: true
+      SMTP_HOST:
+        required: false
+      SMTP_PORT:
+        required: false
+      SMTP_USERNAME:
+        required: false
+      SMTP_PASSWORD:
+        required: false
+      SMTP_FROM:
+        required: false
+      SMTP_TO:
+        required: false
 
 permissions:
   contents: write
@@ -77,6 +89,8 @@ jobs:
           fi
 
       - name: SonarQube scan
+        id: sonar_scan
+        continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -90,6 +104,8 @@ jobs:
         uses: snyk/actions/setup@master
 
       - name: Snyk dependency scan
+        id: snyk_scan
+        continue-on-error: true
         shell: bash
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -107,6 +123,33 @@ jobs:
           if [ "$FAILED" -ne 0 ]; then
             exit 1
           fi
+
+      - name: Send SMTP alert on quality scan failure
+        if: ${{ always() && (steps.sonar_scan.outcome == 'failure' || steps.snyk_scan.outcome == 'failure') && secrets.SMTP_HOST != '' && secrets.SMTP_PORT != '' && secrets.SMTP_USERNAME != '' && secrets.SMTP_PASSWORD != '' && secrets.SMTP_FROM != '' && secrets.SMTP_TO != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "[CI Alert] ${{ inputs.service_name }} quality gate failure"
+          to: ${{ secrets.SMTP_TO }}
+          from: ${{ secrets.SMTP_FROM }}
+          body: |
+            CI quality gate failed for service: ${{ inputs.service_name }}
+            Repository: ${{ github.repository }}
+            Branch/Ref: ${{ github.ref }}
+            Commit: ${{ github.sha }}
+            Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            SonarQube step outcome: ${{ steps.sonar_scan.outcome }}
+            Snyk step outcome: ${{ steps.snyk_scan.outcome }}
+
+      - name: Fail pipeline when quality scan fails
+        if: ${{ steps.sonar_scan.outcome == 'failure' || steps.snyk_scan.outcome == 'failure' }}
+        shell: bash
+        run: |
+          echo "SonarQube or Snyk scan failed. Stopping pipeline."
+          exit 1
 
       - name: Login to GHCR
         uses: docker/login-action@v3
