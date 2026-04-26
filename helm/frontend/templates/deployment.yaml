@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "frontend.fullname" . }}
   namespace: {{ include "frontend.namespace" . }}
@@ -7,6 +7,11 @@ metadata:
     {{- include "frontend.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    blueGreen:
+      activeService: {{ include "frontend.fullname" . }}
+      previewService: {{ include "frontend.fullname" . }}-preview
+      autoPromotionEnabled: false
   selector:
     matchLabels:
       {{- include "frontend.selectorLabels" . | nindent 6 }}
