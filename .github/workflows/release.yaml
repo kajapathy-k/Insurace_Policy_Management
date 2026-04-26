@@ -1,0 +1,22 @@
+name: Policy Service Release
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Release version to promote when triggered manually
+        required: true
+        type: string
+
+jobs:
+  release:
+    uses: Insurance-Policy-Management-Org/insurance-policy-management/.github/workflows/reusable-release-template.yaml@main
+    with:
+      service_name: policy-service
+      helm_chart_path: policy-service
+      release_version: ${{ github.event.release.tag_name || inputs.release_version }}
+    secrets:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}

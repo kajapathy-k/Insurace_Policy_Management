@@ -1,0 +1,21 @@
+name: Policy Service Main CI Image Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  ci_image_pipeline:
+    uses: Insurance-Policy-Management-Org/insurance-policy-management/.github/workflows/reusable-ci-template.yaml@main
+    with:
+      service_name: policy-service
+      dockerfile_path: Dockerfile
+      image_name: policy-service
+      helm_chart_path: policy-service
+    secrets:
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

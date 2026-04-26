@@ -1,0 +1,90 @@
+name: Reusable Release Template
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        description: Service name used for GHCR image path and Helm updates
+        required: true
+        type: string
+      helm_chart_path:
+        description: Chart path under helm/ in central GitOps repository
+        required: true
+        type: string
+      release_version:
+        description: Production release tag (for example v1.2.0)
+        required: true
+        type: string
+    secrets:
+      GHCR_TOKEN:
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release-prod:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Compute source and release image references
+        id: refs
+        shell: bash
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          SOURCE_IMAGE="ghcr.io/insurance-policy-management-org/${{ inputs.service_name }}:${SHORT_SHA}"
+          RELEASE_IMAGE="ghcr.io/insurance-policy-management-org/${{ inputs.service_name }}:${{ inputs.release_version }}"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "source_image=${SOURCE_IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "release_image=${RELEASE_IMAGE}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Pull SHA image, retag, and push release image
+        shell: bash
+        run: |
+          docker pull "${{ steps.refs.outputs.source_image }}"
+          docker tag "${{ steps.refs.outputs.source_image }}" "${{ steps.refs.outputs.release_image }}"
+          docker push "${{ steps.refs.outputs.release_image }}"
+
+      - name: Install yq
+        shell: bash
+        run: |
+          YQ_VERSION="v4.44.3"
+          sudo wget -q "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Clone central GitOps repository
+        shell: bash
+        run: |
+          git clone "https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/Insurance-Policy-Management-Org/insurance-policy-management.git" gitops
+
+      - name: Update Helm values-prod image tag
+        shell: bash
+        run: |
+          cd gitops
+          HELM_CHART_PATH="${{ inputs.helm_chart_path }}" bash scripts/update-helm-tag.sh "${{ inputs.service_name }}" "${{ inputs.release_version }}" prod
+
+      - name: Commit and push production GitOps update
+        shell: bash
+        run: |
+          cd gitops
+          TARGET_FILE="helm/${{ inputs.helm_chart_path }}/values-prod.yaml"
+
+          if git diff --quiet -- "$TARGET_FILE"; then
+            echo "No changes detected in $TARGET_FILE"
+            exit 0
+          fi
+
+          git config user.name "insurance-release-bot"
+          git config user.email "insurance-release-bot@users.noreply.github.com"
+          git add "$TARGET_FILE"
+          git commit -m "release(${{ inputs.service_name }}): promote to ${{ inputs.release_version }}"
+          git pull --rebase origin main
+          git push origin HEAD:main

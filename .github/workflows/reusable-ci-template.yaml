@@ -1,0 +1,172 @@
+name: Reusable CI Template
+
+on:
+  workflow_call:
+    inputs:
+      service_name:
+        description: Service name used for image tags and GitOps updates
+        required: true
+        type: string
+      dockerfile_path:
+        description: Relative path to Dockerfile in caller repository
+        required: true
+        type: string
+      image_name:
+        description: Logical image name for metadata
+        required: true
+        type: string
+      helm_chart_path:
+        description: Chart path under helm/ in central GitOps repository
+        required: true
+        type: string
+    secrets:
+      GHCR_TOKEN:
+        required: true
+      SONAR_TOKEN:
+        required: true
+      SONAR_HOST_URL:
+        required: true
+      SNYK_TOKEN:
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  ci-build-scan-publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare build metadata
+        id: vars
+        shell: bash
+        run: |
+          SHORT_SHA="${GITHUB_SHA::7}"
+          IMAGE_REF="ghcr.io/insurance-policy-management-org/${{ inputs.service_name }}:${SHORT_SHA}"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        if: ${{ hashFiles('requirements.txt') != '' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node.js
+        if: ${{ hashFiles('package.json') != '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install service dependencies
+        shell: bash
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+          fi
+
+          if [ -f package.json ]; then
+            npm install
+          fi
+
+      - name: SonarQube scan
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: >-
+            -Dsonar.projectKey=${{ inputs.service_name }}
+            -Dsonar.projectName=${{ inputs.service_name }}
+
+      - name: Set up Snyk
+        uses: snyk/actions/setup@master
+
+      - name: Snyk dependency scan
+        shell: bash
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          FAILED=0
+
+          if [ -f requirements.txt ]; then
+            snyk test --file=requirements.txt --package-manager=pip --severity-threshold=high || FAILED=1
+          fi
+
+          if [ -f package.json ]; then
+            snyk test --file=package.json --package-manager=npm --severity-threshold=high || FAILED=1
+          fi
+
+          if [ "$FAILED" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ inputs.dockerfile_path }}
+          push: true
+          tags: ${{ steps.vars.outputs.image_ref }}
+          labels: |
+            org.opencontainers.image.title=${{ inputs.image_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.vars.outputs.image_ref }}
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Install yq
+        shell: bash
+        run: |
+          YQ_VERSION="v4.44.3"
+          sudo wget -q "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Clone central GitOps repository
+        shell: bash
+        run: |
+          git clone "https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/Insurance-Policy-Management-Org/insurance-policy-management.git" gitops
+
+      - name: Update Helm values-dev image tag
+        shell: bash
+        run: |
+          cd gitops
+          HELM_CHART_PATH="${{ inputs.helm_chart_path }}" bash scripts/update-helm-tag.sh "${{ inputs.service_name }}" "${{ steps.vars.outputs.short_sha }}" dev
+
+      - name: Commit and push GitOps update
+        shell: bash
+        run: |
+          cd gitops
+          TARGET_FILE="helm/${{ inputs.helm_chart_path }}/values-dev.yaml"
+
+          if git diff --quiet -- "$TARGET_FILE"; then
+            echo "No changes detected in $TARGET_FILE"
+            exit 0
+          fi
+
+          git config user.name "insurance-ci-bot"
+          git config user.email "insurance-ci-bot@users.noreply.github.com"
+          git add "$TARGET_FILE"
+          git commit -m "chore(${{ inputs.service_name }}): update dev image to ${{ steps.vars.outputs.short_sha }}"
+          git pull --rebase origin main
+          git push origin HEAD:main
