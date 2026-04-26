@@ -1,0 +1,6 @@
+mysql chart installed.
+
+Namespace: {{ include "mysql.namespace" . }}
+Service: {{ .Values.service.name }}:{{ .Values.service.port }}
+Headless Service: {{ .Values.headlessService.name }}
+StatefulSet: {{ .Values.statefulSet.name }}

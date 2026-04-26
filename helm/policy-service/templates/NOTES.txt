@@ -1,0 +1,4 @@
+policy-service chart installed.
+
+Namespace: {{ include "policy-service.namespace" . }}
+Service: {{ .Values.service.name }}:{{ .Values.service.port }}

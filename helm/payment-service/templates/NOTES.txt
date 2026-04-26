@@ -1,0 +1,4 @@
+payment-service chart installed.
+
+Namespace: {{ include "payment-service.namespace" . }}
+Service: {{ .Values.service.name }}:{{ .Values.service.port }}

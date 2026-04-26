@@ -1,0 +1,19 @@
+{{- if .Values.gateway.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ include "api-gateway.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ .Values.gateway.name }}
+    app.kubernetes.io/part-of: {{ .Values.global.partOf }}
+spec:
+  gatewayClassName: {{ .Values.gateway.gatewayClassName }}
+  listeners:
+    - name: {{ .Values.gateway.listener.name }}
+      protocol: {{ .Values.gateway.listener.protocol }}
+      port: {{ .Values.gateway.listener.port }}
+      allowedRoutes:
+        namespaces:
+          from: {{ .Values.gateway.listener.allowedRoutesFrom }}
+{{- end }}

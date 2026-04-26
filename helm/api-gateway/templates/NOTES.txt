@@ -1,0 +1,6 @@
+api-gateway chart installed.
+
+Namespace: {{ include "api-gateway.namespace" . }}
+Service: {{ .Values.service.name }}:{{ .Values.service.port }}
+Gateway: {{ .Values.gateway.name }}
+HTTPRoute: {{ .Values.httpRoute.name }}

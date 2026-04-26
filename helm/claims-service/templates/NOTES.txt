@@ -1,0 +1,4 @@
+claims-service chart installed.
+
+Namespace: {{ include "claims-service.namespace" . }}
+Service: {{ .Values.service.name }}:{{ .Values.service.port }}

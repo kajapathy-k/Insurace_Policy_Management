@@ -1,0 +1,4 @@
+frontend chart installed.
+
+Namespace: {{ include "frontend.namespace" . }}
+Service: {{ .Values.service.name }}:{{ .Values.service.port }}

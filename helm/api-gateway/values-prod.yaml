@@ -1,0 +1,98 @@
+namespace:
+  name: insurance-prod
+  labels:
+    name: insurance-prod
+
+fullnameOverride: ""
+
+app:
+  name: api-gateway
+
+global:
+  component: backend
+  partOf: insurance-platform
+
+serviceAccount:
+  create: false
+  name: ""
+
+replicaCount: 2
+
+image:
+  repository: kajapathy/api-gateway
+  tag: v1.1.3
+  pullPolicy: Always
+
+container:
+  name: api-gateway
+  portName: http
+  port: 8000
+
+service:
+  name: api-gateway
+  type: ClusterIP
+  portName: http
+  port: 8000
+  targetPort: http
+  protocol: TCP
+
+configMap:
+  name: api-gateway-config
+  data:
+    USER_SERVICE_URL: http://user-service:8001
+    POLICY_SERVICE_URL: http://policy-service:8002
+    CLAIMS_SERVICE_URL: http://claims-service:8003
+    PAYMENT_SERVICE_URL: http://payment-service:8004
+    SECRET_KEY: change-me-in-production
+    ALGORITHM: HS256
+
+readinessProbe:
+  path: /health
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+livenessProbe:
+  path: /health
+  initialDelaySeconds: 20
+  periodSeconds: 20
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+gateway:
+  enabled: true
+  name: insurance-gateway
+  gatewayClassName: kgateway
+  listener:
+    name: http
+    protocol: HTTP
+    port: 80
+    allowedRoutesFrom: Same
+
+httpRoute:
+  enabled: true
+  name: insurance-route
+  parentRef:
+    name: insurance-gateway
+    sectionName: http
+  routes:
+    - pathPrefix: /api
+      rewritePrefix: /
+      backend:
+        name: api-gateway
+        port: 8000
+        weight: 1
+    - pathPrefix: /
+      backend:
+        name: frontend
+        port: 3000
+        weight: 1

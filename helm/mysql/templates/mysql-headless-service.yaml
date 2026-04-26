@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.headlessService.name }}
+  namespace: {{ include "mysql.namespace" . }}
+  labels:
+    {{- include "mysql.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: {{ .Values.headlessService.publishNotReadyAddresses }}
+  selector:
+    {{- include "mysql.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: {{ .Values.headlessService.portName }}
+      port: {{ .Values.headlessService.port }}
+      targetPort: {{ .Values.headlessService.targetPort }}
+      protocol: {{ .Values.headlessService.protocol }}

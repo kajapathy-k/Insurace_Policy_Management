@@ -1,0 +1,4 @@
+user-service chart installed.
+
+Namespace: {{ include "user-service.namespace" . }}
+Service: {{ .Values.service.name }}:{{ .Values.service.port }}

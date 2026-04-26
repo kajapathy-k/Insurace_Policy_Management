@@ -1,0 +1,64 @@
+namespace:
+  name: insurance-prod
+
+fullnameOverride: ""
+
+app:
+  name: payment-service
+
+global:
+  component: backend
+  partOf: insurance-platform
+
+serviceAccount:
+  create: false
+  name: ""
+
+replicaCount: 2
+
+image:
+  repository: kajapathy/payment-service
+  tag: v1.1.1
+  pullPolicy: Always
+
+container:
+  name: payment-service
+  portName: http
+  port: 8004
+
+service:
+  name: payment-service
+  type: ClusterIP
+  portName: http
+  port: 8004
+  targetPort: http
+  protocol: TCP
+
+configMap:
+  name: payment-service-config
+  data:
+    DATABASE_URL: mysql+pymysql://root:change-me@mysql:3306/insurance_db
+    SECRET_KEY: change-me-in-production
+    ALGORITHM: HS256
+
+readinessProbe:
+  path: /health
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+livenessProbe:
+  path: /health
+  initialDelaySeconds: 30
+  periodSeconds: 20
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+resources:
+  requests:
+    cpu: 150m
+    memory: 192Mi
+  limits:
+    cpu: 700m
+    memory: 768Mi
