@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "api-gateway.fullname" . }}
   namespace: {{ include "api-gateway.namespace" . }}
@@ -7,6 +7,11 @@ metadata:
     {{- include "api-gateway.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    blueGreen:
+      activeService: {{ .Values.service.name }}
+      previewService: {{ .Values.service.name }}-preview
+      autoPromotionEnabled: false
   selector:
     matchLabels:
       {{- include "api-gateway.selectorLabels" . | nindent 6 }}

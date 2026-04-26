@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: {{ include "claims-service.fullname" . }}
   namespace: {{ include "claims-service.namespace" . }}
@@ -7,6 +7,11 @@ metadata:
     {{- include "claims-service.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    blueGreen:
+      activeService: {{ .Values.service.name }}
+      previewService: {{ .Values.service.name }}-preview
+      autoPromotionEnabled: false
   selector:
     matchLabels:
       {{- include "claims-service.selectorLabels" . | nindent 6 }}
